@@ -64,8 +64,8 @@ all: main-build
 main-build: reaction-wheel.elf secondary-outputs
 
 # Tool invocations
-reaction-wheel.elf reaction-wheel.map: $(OBJS) $(USER_OBJS) C:\Users\yevge\STM32CubeIDE\workspace_1.10.1\reaction-wheel\STM32F411VETX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "reaction-wheel.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"C:\Users\yevge\STM32CubeIDE\workspace_1.10.1\reaction-wheel\STM32F411VETX_FLASH.ld" --specs=nosys.specs -Wl,-Map="reaction-wheel.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -u _printf_float -u _scanf_float -Wl,--start-group -lc -lm -Wl,--end-group
+reaction-wheel.elf reaction-wheel.map: $(OBJS) $(USER_OBJS) C:\Users\Yevgeniy\ Gorbachev\STM32CubeIDE\workspace_1.11.2\reaction-wheel\STM32F411VETX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "reaction-wheel.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"C:\Users\Yevgeniy Gorbachev\STM32CubeIDE\workspace_1.11.2\reaction-wheel\STM32F411VETX_FLASH.ld" --specs=nosys.specs -Wl,-Map="reaction-wheel.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -u _printf_float -u _scanf_float -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 
