@@ -94,6 +94,7 @@ void Error_Handler(void);
 #define SWO_GPIO_Port GPIOB
 #define EXTI1_Pin GPIO_PIN_1
 #define EXTI1_GPIO_Port GPIOE
+
 /* USER CODE BEGIN Private defines */
 
 #define LED_BANK LD4_GPIO_Port

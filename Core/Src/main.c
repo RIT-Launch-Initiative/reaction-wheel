@@ -53,6 +53,9 @@ typedef enum {
 /* USER CODE BEGIN PV */
 //stmdev_ctx_t mag_ctx;
 stmdev_ctx_t gyro_ctx;
+stmdev_ctx_t accel_ctx;
+stmdev_ctx_t mag_ctx;
+
 program_mode_t program_mode = INIT;
 uint32_t program_mode_time;
 uint32_t button_time;
@@ -78,22 +81,22 @@ int _write(int file, char* ptr, int len)
 	return len;
 }
 
-#define PRINT_MAX_BUFF 144 // can't send more than this at 100Hz for 115200 baud
+#define USART_MAX_BUFF 104
 
 // send printf-style arguments to UART 6
 int print_uart(const char* fmt, ...)
 {
-	char buf[PRINT_MAX_BUFF];
+	char buf[USART_MAX_BUFF];
 	int status;
 	va_list ap;
 
 	// pass variable number of arguments using va_list function
 	// see the end of [man printf]
 	va_start(ap, fmt);
-	status = vsnprintf(buf, PRINT_MAX_BUFF, fmt, ap);
+	status = vsnprintf(buf, USART_MAX_BUFF, fmt, ap);
 	va_end(ap);
 
-	if (status >= PRINT_MAX_BUFF || status < 0)
+	if (status >= USART_MAX_BUFF || status < 0)
 	{
 		return -1;
 	}
@@ -115,29 +118,45 @@ int32_t flash_led(void* self)
 	return 0;
 }
 
-int32_t print_gyro(void* self)
+int print_vector3(vector3_t vector)
+{
+	return print_uart("%3.3f\t%3.3f\t%3.3f\t", vector.x, vector.y, vector.z);
+}
+
+int32_t print_sensors(void* self)
 {
 	int32_t status;
 	uint32_t time;
-	vector3_t rate;
+	vector3_t angular_rate;
+	vector3_t acceleration;
+	vector3_t mag_field;
+	vector3_t nan = {.x = NAN, .y = NAN, .z = NAN};
 
-	status = get_angular_rate(&gyro_ctx, &rate);
+
 	time = __HAL_TIM_GET_COUNTER(&htim5);
 
+	print_uart("%3.3f\t", (float_t) time / 1e6);
+	status = get_angular_rate(&gyro_ctx, &angular_rate);
 	if (status)
-	{
-		printf("#RED#Failed reading gyro\n");
-		return status;
-	}
+		print_vector3(nan);
+	else
+		print_vector3(angular_rate);
 
-	status = print_uart("%3.3f\t%+3.3f\t%+3.3f\t%+3.3f\r\n",
-			(float_t) time / 1e6, rate.x, rate.y, rate.z);
+	status = get_accel(&accel_ctx, &acceleration);
 	if (status)
-	{
-		printf("#RED#Failed sending UART: %ld\n", status);
-	}
+		print_vector3(nan);
+	else
+		print_vector3(acceleration);
 
-	return status;
+	status = get_mag(&mag_ctx, &mag_field);
+	if (status)
+		print_vector3(nan);
+	else
+		print_vector3(mag_field);
+
+	print_uart("\r\n");
+
+	return 0;
 }
 
 bad_task_t idle_tasks[] = {
@@ -149,8 +168,8 @@ bad_task_t btn_tasks[] = {
 };
 
 bad_task_t print_tasks[] = {
-	{.task = flash_led, .data = &print_led, .timer = &htim5, .period = 500*1000U, .last = 0U},
-	{.task = print_gyro, .data = NULL, .timer = &htim5, .period = 10*1000U, .last = 0U},
+	{.task = flash_led, .data = &print_led, .timer = &htim5, .period = 250*1000U, .last = 0U},
+	{.task = print_sensors, .data = NULL, .timer = &htim5, .period = 10*1000U, .last = 0U},
 };
 /* USER CODE END 0 */
 
@@ -187,8 +206,10 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
   init_gyro(&gyro_ctx, &hspi1);
+  init_accel(&accel_ctx, &hi2c1);
+  init_mag(&mag_ctx, &hi2c1);
   HAL_TIM_Base_Start(&htim5);
-  printf("Initalized gyroscope\nTesting debugging statements\n");
+  printf("Printing all sensors\n");
 
   /* USER CODE END 2 */
 
@@ -206,13 +227,13 @@ int main(void)
 			case(INIT):
 			case(IDLE):
 			  RUN_TASKS(idle_tasks);
-				  break;
+			  break;
 			case(BTN):
 			  RUN_TASKS(btn_tasks);
-				  break;
+			  break;
 			case(PRINT):
 			  RUN_TASKS(print_tasks);
-				  break;
+			  break;
 	  }
   }
   /* USER CODE END 3 */
@@ -280,6 +301,8 @@ void handle_button(void)
 		uint32_t sec = 1000000;
 		if (elapsed > 1 * sec)
 		{
+			HAL_GPIO_WritePin(LED_BANK, idle_led, GPIO_PIN_RESET);
+			HAL_GPIO_WritePin(LED_BANK, btn_led, GPIO_PIN_RESET);
 			program_mode = PRINT;
 			program_mode_time = cur;
 		}
